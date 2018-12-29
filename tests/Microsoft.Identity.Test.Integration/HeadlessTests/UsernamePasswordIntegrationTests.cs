@@ -52,7 +52,7 @@ namespace Microsoft.Identity.Test.Unit.Integration
         [TestInitialize]
         public void TestInitialize()
         {
-            TestCommon.ResetState();
+            //TestCommon.ResetState();
         }
 
 
