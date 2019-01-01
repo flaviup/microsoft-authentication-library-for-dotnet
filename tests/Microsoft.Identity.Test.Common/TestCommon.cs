@@ -29,6 +29,7 @@ using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Internal;
 using Microsoft.Identity.Client.Instance;
 using Microsoft.Identity.Test.Common.Core.Mocks;
+using Microsoft.Identity.Test.Unit;
 
 namespace Microsoft.Identity.Test.Common
 {
@@ -49,6 +50,12 @@ namespace Microsoft.Identity.Test.Common
             Logger.PiiLoggingEnabled = false;
             Logger.Level = LogLevel.Info;
             Logger.DefaultLoggingEnabled = false;
+        }
+
+        internal static void MockInstanceDiscoveryAndOpenIdRequest(MockHttpManager mockHttpManager)
+        {
+            mockHttpManager.AddInstanceDiscoveryMockHandler();
+            mockHttpManager.AddMockHandlerForTenantEndpointDiscovery(MsalTestConstants.AuthorityHomeTenant);
         }
 
     }
