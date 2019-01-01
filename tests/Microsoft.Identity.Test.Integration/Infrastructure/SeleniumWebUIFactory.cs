@@ -5,7 +5,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Microsoft.Identity.Test.Integration.SeleniumTests
+namespace Microsoft.Identity.Test.Integration.Infrastructure
 {
     internal class SeleniumWebUIFactory : IWebUIFactory
     {

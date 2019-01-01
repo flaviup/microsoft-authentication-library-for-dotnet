@@ -7,28 +7,21 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Identity.Test.Integration.SeleniumTests
+namespace Microsoft.Identity.Test.Integration.Infrastructure
 {
-    internal class AuthorizationTcpListener : IDisposable
+    /// <summary>
+    /// This object is responsible for listening to a single TCP request, on localhost:port, 
+    /// extracting the uri, parsing 
+    /// </summary>
+    /// <remarks>
+    /// The underlying TCP listener might capture multiple requests, but only the first one is handled.
+    /// </remarks>
+    internal class SingleMessageTcpListener : IDisposable
     {
-        private const string CloseWindowSuccessHtml = @"<html>
-  <head><title>Authentication Complete</title></head>
-  <body>
-    Authentication complete. You can return to the application. Feel free to close this browser tab.
-  </body>
-</html>";
-
-        private const string CloseWindowFailureHtml = @"<html>
-  <head><title>Authentication Failed</title></head>
-  <body>
-    Authentication failed. You can return to the application. Feel free to close this browser tab.
-  </body>
-</html>";
-
         private readonly int _port;
         private readonly System.Net.Sockets.TcpListener _tcpListener;
 
-        public AuthorizationTcpListener(int port)
+        public SingleMessageTcpListener(int port)
         {
             if (port < 1 || port == 80)
             {
@@ -41,22 +34,21 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
 
         }
 
-        public async Task<AuthorizationResult> WaitForCallbackAsync(CancellationToken cancellationToken)
+        public async Task ListenToSingleRequestAndRespondAsync(
+            Func<Uri, string> responseProducer,
+            CancellationToken cancellationToken)
         {
-            TcpClient tcpClient = null;
+            cancellationToken.Register(() => _tcpListener.Stop());
 
+            TcpClient tcpClient = null;
             try
             {
-                // TcpClient doesn't natively support cancellation token, so wrap it in a task 
-                // see https://stackoverflow.com/questions/19220957/tcplistener-how-to-stop-listening-while-awaiting-accepttcpclientasync
-                while (true)
-                {
-                    tcpClient = await Task.Run(
-                        () => _tcpListener.AcceptTcpClientAsync(), cancellationToken)
-                        .ConfigureAwait(false);
+                tcpClient =
+                    await AcceptTcpClientAsync(_tcpListener, cancellationToken)
+                    .ConfigureAwait(false);
 
-                    return await ExtractAuthroizationResultAsync(tcpClient, cancellationToken).ConfigureAwait(false);                    
-                }
+                await ExtractUriAndRespondAsync(tcpClient, responseProducer, cancellationToken).ConfigureAwait(false);
+
             }
             finally
             {
@@ -66,20 +58,38 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
 
         }
 
-        private async Task<AuthorizationResult> ExtractAuthroizationResultAsync(TcpClient tcpClient, CancellationToken cancellationToken)
+        /// <summary>
+        /// AcceptTcpClientAsync does not natively support cancellation, so use this wrapper. Make sure
+        /// the cancellation token is registered to stop the listener.
+        /// </summary>
+        /// <remarks>See https://stackoverflow.com/questions/19220957/tcplistener-how-to-stop-listening-while-awaiting-accepttcpclientasync</remarks>
+        private static async Task<TcpClient> AcceptTcpClientAsync(TcpListener listener, CancellationToken token)
+        {
+            try
+            {
+                return await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex) when (token.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("Cancellation was requested while awaiting TCP client connection.", ex);
+            }
+        }
+
+        private async Task ExtractUriAndRespondAsync(
+            TcpClient tcpClient,
+            Func<Uri, string> responseProducer,
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             string httpRequest = await GetTcpResponseAsync(tcpClient, cancellationToken).ConfigureAwait(false);
-            string uri = ExtractUriFromHttpRequest(httpRequest);
+            Uri uri = ExtractUriFromHttpRequest(httpRequest);
 
-            AuthorizationResult authenticationResult = new AuthorizationResult(AuthorizationStatus.Success, uri);
+            // AuthorizationResult authenticationResult = new AuthorizationResult(AuthorizationStatus.Success, uri);
 
             // write an "OK, please close the browser message" 
-            await WriteResponseAsync(
-                tcpClient.GetStream(), authenticationResult, cancellationToken).ConfigureAwait(false);
-
-            return authenticationResult;
+            await WriteResponseAsync(responseProducer(uri), tcpClient.GetStream(), cancellationToken)
+                .ConfigureAwait(false);
         }
 
 #pragma warning disable CS1570 // XML comment has badly formed XML
@@ -96,7 +106,7 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
         /// Accept-Encoding: gzip, deflate, br
         /// </summary>
         /// <returns>http://localhost:9001/?code=foo&session_state=bar</returns>
-        private string ExtractUriFromHttpRequest(string httpRequest)
+        private Uri ExtractUriFromHttpRequest(string httpRequest)
 #pragma warning restore CS1570 // XML comment has badly formed XML
         {
             string regexp = @"GET \/\?(.*) HTTP";
@@ -112,9 +122,8 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
             UriBuilder uriBuilder = new UriBuilder();
             uriBuilder.Query = getQuery;
             uriBuilder.Port = _port;
-            Uri u = uriBuilder.Uri;
 
-            return uriBuilder.ToString();
+            return uriBuilder.Uri;
         }
 
         private static async Task<string> GetTcpResponseAsync(TcpClient client, CancellationToken cancellationToken)
@@ -140,18 +149,21 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
             return stringBuilder.ToString();
         }
 
-        private async Task WriteResponseAsync(NetworkStream stream, AuthorizationResult result, CancellationToken cancellationToken)
+        private async Task WriteResponseAsync(
+            string message,
+            NetworkStream stream,
+            CancellationToken cancellationToken)
         {
-            string message = null;
-            switch (result.Status)
-            {
-                case AuthorizationStatus.Success:
-                    message = CloseWindowSuccessHtml;
-                    break;
-                default:
-                    message = CloseWindowFailureHtml;
-                    break;
-            }
+            //string message = null;
+            //switch (result.Status)
+            //{
+            //    case AuthorizationStatus.Success:
+            //        message = CloseWindowSuccessHtml;
+            //        break;
+            //    default:
+            //        message = CloseWindowFailureHtml;
+            //        break;
+            //}
 
             string fullResponse = $"HTTP/1.1 200 OK\r\n\r\n{message}";
             var response = Encoding.ASCII.GetBytes(fullResponse);

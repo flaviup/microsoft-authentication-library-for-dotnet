@@ -30,12 +30,12 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Test.Common;
-using Microsoft.Identity.Test.Core.UIAutomation;
+using Microsoft.Identity.Test.Integration.Infrastructure;
 using Microsoft.Identity.Test.LabInfrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 
-namespace Microsoft.Identity.Test.Unit.Integration
+namespace Microsoft.Identity.Test.Integration.SeleniumTests
 {
     // Important: do not install a NuGet package with the Chrome driver as it is a security risk.
     // Instead, install the Chrome driver on the test machine

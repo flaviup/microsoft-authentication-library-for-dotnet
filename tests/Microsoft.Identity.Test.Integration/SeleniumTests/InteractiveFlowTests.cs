@@ -2,6 +2,7 @@
 using Microsoft.Identity.Client.Core;
 using Microsoft.Identity.Test.Common;
 using Microsoft.Identity.Test.Core.UIAutomation;
+using Microsoft.Identity.Test.Integration.Infrastructure;
 using Microsoft.Identity.Test.LabInfrastructure;
 using Microsoft.Identity.Test.Unit;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -19,7 +20,7 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
     [TestClass]
     public class InteractiveFlowTests
     {
-        private readonly TimeSpan _seleniumTimeout = TimeSpan.FromMinutes(2);
+        private readonly TimeSpan _seleniumTimeout = TimeSpan.FromSeconds(3);
 
         #region MSTest Hooks
         /// <summary>
@@ -62,9 +63,16 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
 
             // tests need to use http://localhost:port so that we can capture the AT
             pca.RedirectUri = SeleniumWebUIFactory.FindFreeLocalhostRedirectUri();
+            AuthenticationResult result = null;
+            try
+            {
+                // Act
+                result = await pca.AcquireTokenAsync(new[] { "user.read" }).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
 
-            // Act
-            AuthenticationResult result = await pca.AcquireTokenAsync(new[] { "user.read" }).ConfigureAwait(false);
+            }
 
             // Assert
             Assert.IsFalse(string.IsNullOrWhiteSpace(result.AccessToken));

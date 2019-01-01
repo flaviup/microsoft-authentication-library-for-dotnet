@@ -3,16 +3,31 @@ using Microsoft.Identity.Client.UI;
 using Microsoft.Identity.Test.Unit;
 using OpenQA.Selenium;
 using System;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Identity.Test.Integration.SeleniumTests
+namespace Microsoft.Identity.Test.Integration.Infrastructure
 {
     internal class SeleniumWebUI : IWebUI
     {
         private readonly Action<IWebDriver> _seleniumAutomationLogic;
         private readonly TimeSpan _timeout;
+
+        private const string CloseWindowSuccessHtml = @"<html>
+  <head><title>Authentication Complete</title></head>
+  <body>
+    Authentication complete. You can return to the application. Feel free to close this browser tab.
+  </body>
+</html>";
+
+        private const string CloseWindowFailureHtml = @"<html>
+  <head><title>Authentication Failed</title></head>
+  <body>
+    Authentication failed. You can return to the application. Feel free to close this browser tab.
+  </body>
+</html>";
 
         public SeleniumWebUI(Action<IWebDriver> seleniumAutomationLogic, TimeSpan timeout)
         {
@@ -72,39 +87,49 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
             Uri authorizationUri,
             Uri redirectUri)
         {
-            if (!redirectUri.IsLoopback)
-            {
-                throw new ArgumentException("Only loopback redirect uri");
-            }
-
-            if (redirectUri.IsDefaultPort)
-            {
-                throw new ArgumentException("Port required");
-            }
-
             using (var driver = InitDriverAndGoToUrl(authorizationUri.OriginalString))
-            using (var listener = new AuthorizationTcpListener(redirectUri.Port)) // starts listening
+            using (var listener = new SingleMessageTcpListener(redirectUri.Port)) // starts listening
             {
-                // Run the tcp listener and the selenium automation in parallel
-                var seleniumAutomationTask = Task.Run(() =>
-                {
-                    _seleniumAutomationLogic(driver);
-                });
-
+                AuthorizationResult authResult = null;
                 CancellationTokenSource cancellationTokenSource = new CancellationTokenSource(_timeout);
-                var listenForAuthCodeTask = listener.WaitForCallbackAsync(cancellationTokenSource.Token);
+
+                var listenForAuthCodeTask = listener.ListenToSingleRequestAndRespondAsync(
+                    (uri) =>
+                    {
+                        Trace.WriteLine("Intercepted an auth code url: " + uri.ToString());
+                        authResult = new AuthorizationResult(AuthorizationStatus.Success, uri.ToString());
+                        switch (authResult.Status)
+                        {
+                            case AuthorizationStatus.Success:
+                                return CloseWindowSuccessHtml;
+                            default:
+                                return CloseWindowFailureHtml;
+                        }
+                    },
+                    cancellationTokenSource.Token);
 
                 try
                 {
 
+                    // Run the tcp listener and the selenium automation in parallel
+                    Task seleniumAutomationTask = Task.Run(() =>
+                    {
+                        _seleniumAutomationLogic(driver);
+                    });
+
                     await Task.WhenAll(seleniumAutomationTask, listenForAuthCodeTask).ConfigureAwait(false);
-                    return listenForAuthCodeTask.Result;
+                    return authResult;
 
                 }
                 catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
                 {
-                    return await Task.FromResult(
-                        new AuthorizationResult(AuthorizationStatus.UserCancel)).ConfigureAwait(false);
+                    var result = new AuthorizationResult(AuthorizationStatus.UserCancel)
+                    {
+                        ErrorDescription = "Listening for an auth code was cancelled or has timed out."
+                        Error = "system_browser_cancel_exception"
+                    };
+
+                    return await Task.FromResult(result).ConfigureAwait(false);
                 }
                 catch (SocketException ex)
                 {

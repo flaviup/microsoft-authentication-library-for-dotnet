@@ -7,21 +7,18 @@ using OpenQA.Selenium.Support.UI;
 using System.Diagnostics;
 using Microsoft.Identity.Test.LabInfrastructure;
 using Microsoft.Identity.Test.Core.UIAutomation;
-using OpenQA.Selenium.Firefox;
 
-namespace Microsoft.Identity.Test.Unit
+namespace Microsoft.Identity.Test.Integration.Infrastructure
 {
     public static class SeleniumExtensions
     {
         public static IWebDriver CreateDefaultWebDriver()
         {
-         
             ChromeOptions options = new ChromeOptions();
 
             // ~2x faster, no visual rendering
             // remove when debugging to see the UI automation
-            options.AddArguments("headless");
-          
+             options.AddArguments("headless");
 
             var driver = new ChromeDriver(options);
             driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
