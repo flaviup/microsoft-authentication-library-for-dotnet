@@ -1,6 +1,5 @@
 ﻿using Microsoft.Identity.Client.Core;
 using Microsoft.Identity.Client.UI;
-using Microsoft.Identity.Test.Unit;
 using OpenQA.Selenium;
 using System;
 using System.Diagnostics;
@@ -125,8 +124,8 @@ namespace Microsoft.Identity.Test.Integration.Infrastructure
                 {
                     var result = new AuthorizationResult(AuthorizationStatus.UserCancel)
                     {
-                        ErrorDescription = "Listening for an auth code was cancelled or has timed out."
-                        Error = "system_browser_cancel_exception"
+                        ErrorDescription = "Listening for an auth code was cancelled or has timed out.",
+                        Error = "system_browser_cancel_or_timeout_exception"
                     };
 
                     return await Task.FromResult(result).ConfigureAwait(false);
