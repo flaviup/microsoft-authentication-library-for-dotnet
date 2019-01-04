@@ -154,8 +154,8 @@ namespace Microsoft.Identity.Client.Internal.Requests
                     var authenticationResult = await ExecuteAsync(cancellationToken).ConfigureAwait(false);
                     LogReturnedToken(authenticationResult);
 
-                    apiEvent.TenantId = authenticationResult.TenantId;
-                    apiEvent.AccountId = authenticationResult.UniqueId;
+                    apiEvent.TenantId = authenticationResult?.TenantId;
+                    apiEvent.AccountId = authenticationResult?.UniqueId;
                     apiEvent.WasSuccessful = true;
                     return authenticationResult;
                 }
@@ -346,7 +346,7 @@ namespace Microsoft.Identity.Client.Internal.Requests
 
         private void LogReturnedToken(AuthenticationResult result)
         {
-            if (result.AccessToken != null)
+            if (result?.AccessToken != null)
             {
                 AuthenticationRequestParameters.RequestContext.Logger.Info(
                     string.Format(

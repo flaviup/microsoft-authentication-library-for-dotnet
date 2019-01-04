@@ -471,7 +471,136 @@ namespace Microsoft.Identity.Client
                         behavior, extraQueryParameters, parent, ApiEvent.ApiIds.AcquireTokenWithScopeUserBehaviorAuthority).ConfigureAwait(false);
         }
 
+        public async Task<AuthenticationResult> AcquireTokenAsync(IEnumerable<string> scopes, IAccount account,
+        UIBehavior behavior, string extraQueryParameters, IEnumerable<string> extraScopesToConsent, string authority, UIParent parent, 
+        string userName, string password)
+        {
+            return await AcquireTokenAsync(scopes, account, behavior, 
+                                           extraQueryParameters, extraScopesToConsent, 
+                                           authority, parent, userName, password, true).ConfigureAwait(false);
+        }
 
+        public async Task<AuthenticationResult> AttemptAcquireTokenAsync(IEnumerable<string> scopes, IAccount account,
+        UIBehavior behavior, string extraQueryParameters, IEnumerable<string> extraScopesToConsent, string authority, UIParent parent, 
+        string userName, string password)
+        {
+            return await AcquireTokenAsync(scopes, account, behavior, 
+                                           extraQueryParameters, extraScopesToConsent, 
+                                           authority, parent, userName, password, false).ConfigureAwait(false);
+        }
+
+        private async Task<AuthenticationResult> AcquireTokenAsync(IEnumerable<string> scopes, IAccount account,
+        UIBehavior behavior, string extraQueryParameters, IEnumerable<string> extraScopesToConsent, string authority, UIParent parent, 
+        string userName, string password, bool cacheResult)
+        {
+            Authority authorityInstance = Instance.Authority.CreateAuthority(ServiceBundle, authority, ValidateAuthority);
+
+            var requestParams = CreateRequestParameters(authorityInstance, scopes, account, cacheResult ? UserTokenCache : null);
+            requestParams.ExtraQueryParameters = extraQueryParameters;
+
+            var handler = new NonInteractiveLoginRequest(
+                ServiceBundle,
+                requestParams,
+                ApiEvent.ApiIds.AcquireTokenWithScopeUserBehaviorAuthority,
+                extraScopesToConsent,
+                behavior,
+                CreateWebAuthenticationDialog(parent, behavior, requestParams.RequestContext),
+                userName,
+                password);
+
+            return await handler.RunAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private NonInteractiveResetPasswordRequest _resetPasswordRequest;
+
+        public async Task<bool> PasswordResetRequestEmailValidationAsync(IEnumerable<string> scopes, string authority, UIParent parent, string email)
+        {
+            Authority authorityInstance = Instance.Authority.CreateAuthority(ServiceBundle, authority, ValidateAuthority);
+
+            var requestParams = CreateRequestParameters(authorityInstance, scopes, (IAccount)null, null);
+            requestParams.ExtraQueryParameters = string.Empty;
+            var behavior = UIBehavior.SelectAccount;
+
+            _resetPasswordRequest = new NonInteractiveResetPasswordRequest(
+                ServiceBundle,
+                requestParams,
+                ApiEvent.ApiIds.AcquireTokenWithScopeUserBehaviorAuthority,
+                null,
+                behavior,
+                CreateWebAuthenticationDialog(parent, behavior, requestParams.RequestContext),
+                email);
+
+            return (await _resetPasswordRequest.RunAsync(CancellationToken.None).ConfigureAwait(false)) != null;
+        }
+
+        public async Task<bool> PasswordResetVerifyEmailValidationCodeAsync(string code)
+        {
+            if (_resetPasswordRequest != null)
+            {
+                _resetPasswordRequest.VerificationCode = code;
+                return (await _resetPasswordRequest.RunAsync(CancellationToken.None).ConfigureAwait(false) != null);
+            }
+
+            return false;
+        }
+
+        public async Task<AuthenticationResult> ResetEmailPasswordAsync(string password)
+        {
+            if (_resetPasswordRequest != null)
+            {
+                _resetPasswordRequest.Password = password;
+                return await _resetPasswordRequest.RunAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+
+            return new AuthenticationResult();
+        }
+
+        private NonInteractiveRegisterAccountRequest _registerAccountRequest;
+
+        public async Task<bool> AccountRegistrationRequestEmailValidationAsync(IEnumerable<string> scopes, string authority, UIParent parent, string email)
+        {
+            Authority authorityInstance = Instance.Authority.CreateAuthority(ServiceBundle, authority, ValidateAuthority);
+
+            var requestParams = CreateRequestParameters(authorityInstance, scopes, (IAccount)null, null);
+            requestParams.ExtraQueryParameters = string.Empty;
+            var behavior = UIBehavior.SelectAccount;
+
+            _registerAccountRequest = new NonInteractiveRegisterAccountRequest(
+                ServiceBundle,
+                requestParams,
+                ApiEvent.ApiIds.AcquireTokenWithScopeUserBehaviorAuthority,
+                null,
+                behavior,
+                CreateWebAuthenticationDialog(parent, behavior, requestParams.RequestContext),
+                email);
+
+            return (await _registerAccountRequest.RunAsync(CancellationToken.None).ConfigureAwait(false)) != null;
+
+        }
+
+        public async Task<bool> AccountRegistrationVerifyEmailValidationCodeAsync(string code)
+        {
+            if (_registerAccountRequest != null)
+            {
+                _registerAccountRequest.VerificationCode = code;
+                return (await _registerAccountRequest.RunAsync(CancellationToken.None).ConfigureAwait(false) != null);
+            }
+
+            return false;
+        }
+
+        public async Task<AuthenticationResult> RegisterAccountAsync(string password, string firstName, string lastName)
+        {
+            if (_registerAccountRequest != null)
+            {
+                _registerAccountRequest.Password = password;
+                _registerAccountRequest.FirstName = firstName;
+                _registerAccountRequest.LastName = lastName;
+                return await _registerAccountRequest.RunAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+
+            return new AuthenticationResult();
+        }
 
         internal IWebUI CreateWebAuthenticationDialog(UIParent parent, UIBehavior behavior, RequestContext requestContext)
         {

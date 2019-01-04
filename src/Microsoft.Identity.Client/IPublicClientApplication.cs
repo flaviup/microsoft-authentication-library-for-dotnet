@@ -284,6 +284,24 @@ namespace Microsoft.Identity.Client
             string extraQueryParameters,
             IEnumerable<string> extraScopesToConsent,
             string authority, UIParent parent);
+
+        // Login
+        Task<AuthenticationResult> AcquireTokenAsync(IEnumerable<string> scopes, IAccount account,
+        UIBehavior behavior, string extraQueryParameters, IEnumerable<string> extraScopesToConsent, string authority, UIParent parent, 
+        string userName, string password);
+        Task<AuthenticationResult> AttemptAcquireTokenAsync(IEnumerable<string> scopes, IAccount account,
+        UIBehavior behavior, string extraQueryParameters, IEnumerable<string> extraScopesToConsent, string authority, UIParent parent, 
+        string userName, string password);
+
+        // Password Reset
+        Task<bool> PasswordResetRequestEmailValidationAsync(IEnumerable<string> scopes, string authority, UIParent parent, string email);
+        Task<bool> PasswordResetVerifyEmailValidationCodeAsync(string code);
+        Task<AuthenticationResult> ResetEmailPasswordAsync(string password);
+
+        // Account Registration
+        Task<bool> AccountRegistrationRequestEmailValidationAsync(IEnumerable<string> scopes, string authority, UIParent parent, string email);
+        Task<bool> AccountRegistrationVerifyEmailValidationCodeAsync(string code);
+        Task<AuthenticationResult> RegisterAccountAsync(string password, string firstName, string lastName);
         // endif !NOT_CORE
 #endif
 

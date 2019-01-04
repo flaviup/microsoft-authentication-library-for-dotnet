@@ -78,10 +78,10 @@ namespace Microsoft.Identity.Client
                     return new AuthorizationResult(AuthorizationStatus.Success, data.GetStringExtra("ReturnedUrl"));
 
                 case (int)Result.Canceled:
-                    return new AuthorizationResult(AuthorizationStatus.UserCancel, null);
+                    return new AuthorizationResult(AuthorizationStatus.UserCancel, (string)null);
 
                 default:
-                    return new AuthorizationResult(AuthorizationStatus.UnknownError, null);
+                    return new AuthorizationResult(AuthorizationStatus.UnknownError, (string)null);
             }
         }
 
@@ -93,10 +93,10 @@ namespace Microsoft.Identity.Client
                     return CreateResultForOkResponse(data.GetStringExtra("com.microsoft.identity.client.finalUrl"));
 
                 case AndroidConstants.Cancel:
-                    return new AuthorizationResult(AuthorizationStatus.UserCancel, null);
+                    return new AuthorizationResult(AuthorizationStatus.UserCancel, (string)null);
 
                 default:
-                    return new AuthorizationResult(AuthorizationStatus.UnknownError, null);
+                    return new AuthorizationResult(AuthorizationStatus.UnknownError, (string)null);
             }
         }
 

@@ -26,6 +26,7 @@
 //------------------------------------------------------------------------------
 
 using System;
+using System.Net;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Microsoft.Identity.Client.Exceptions;
@@ -46,7 +47,11 @@ namespace Microsoft.Identity.Client.UI
     [DataContract]
     internal class AuthorizationResult
     {
-        internal AuthorizationResult(AuthorizationStatus status, string returnedUriInput) : this(status)
+        internal AuthorizationResult(AuthorizationStatus status, string returnedUriInput) : this(status, new Uri(returnedUriInput))
+        {
+        }
+
+        internal AuthorizationResult(AuthorizationStatus status, Uri returnedUriInput) : this(status)
         {
             if (Status == AuthorizationStatus.UserCancel)
             {
@@ -87,13 +92,17 @@ namespace Microsoft.Identity.Client.UI
 
         public void ParseAuthorizeResponse(string webAuthenticationResult)
         {
-            var resultUri = new Uri(webAuthenticationResult);
+            ParseAuthorizeResponse(new Uri(webAuthenticationResult));
+        }
 
+        public void ParseAuthorizeResponse(Uri resultUri)
+        {
             // NOTE: The Fragment property actually contains the leading '#' character and that must be dropped
-            string resultData = resultUri.Query;
+            string resultData = resultUri?.Query;
 
             if (!string.IsNullOrWhiteSpace(resultData))
             {
+                var webAuthenticationResult = resultUri.ToString();
                 // RemoveAccount the leading '?' first
                 Dictionary<string, string> response = CoreHelpers.ParseKeyValueList(resultData.Substring(1), '&',
                     true, null);

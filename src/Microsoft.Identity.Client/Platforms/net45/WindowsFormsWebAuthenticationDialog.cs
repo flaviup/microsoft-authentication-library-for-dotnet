@@ -78,7 +78,7 @@ namespace Microsoft.Identity.Client.Platforms.net45
                 case DialogResult.OK:
                     break;
                 case DialogResult.Cancel:
-                    Result = new AuthorizationResult(AuthorizationStatus.UserCancel, null);
+                    Result = new AuthorizationResult(AuthorizationStatus.UserCancel, (string)null);
                     break;
                 default:
                     throw CreateExceptionForAuthenticationUiFailed(_statusCode);

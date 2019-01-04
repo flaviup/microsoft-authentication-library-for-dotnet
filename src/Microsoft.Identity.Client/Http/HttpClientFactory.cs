@@ -40,9 +40,14 @@ namespace Microsoft.Identity.Client.Http
         // The HttpClient is a singleton per ClientApplication so that we don't have a process wide singleton.
         public const long MaxResponseContentBufferSizeInBytes = 1024*1024;
 
-        public HttpClientFactory()
+        public HttpClientFactory(bool allowAutoRedirect = true)
         {
-            var httpClient = new HttpClient(new HttpClientHandler() { UseDefaultCredentials = true })
+            var clientHandler = new HttpClientHandler
+            {
+                UseDefaultCredentials = true,
+                AllowAutoRedirect = allowAutoRedirect
+            };
+            var httpClient = new HttpClient(clientHandler)
             {
                 MaxResponseContentBufferSize = MaxResponseContentBufferSizeInBytes
             };

@@ -108,7 +108,7 @@ namespace Microsoft.Identity.Client.Platforms.iOS.EmbeddedWebview
         public void CancelAuthentication(object sender, EventArgs e)
         {
             this.DismissViewController(true, () =>
-                    callbackMethod(new AuthorizationResult(AuthorizationStatus.UserCancel, null)));
+                    callbackMethod(new AuthorizationResult(AuthorizationStatus.UserCancel, (string)null)));
         }
 
         public override void DismissViewController(bool animated, Action completionHandler)

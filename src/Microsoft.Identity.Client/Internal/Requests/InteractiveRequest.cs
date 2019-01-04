@@ -68,6 +68,18 @@ namespace Microsoft.Identity.Client.Internal.Requests
         {
         }
 
+        internal protected AuthorizationResult AuthorizationResult
+        {
+            get => _authorizationResult;
+            set
+            {
+                if (_authorizationResult != value)
+                {
+                    _authorizationResult = value;
+                }
+            }
+        }
+
         public InteractiveRequest(
             IServiceBundle serviceBundle,
             AuthenticationRequestParameters authenticationRequestParameters,
@@ -118,7 +130,7 @@ namespace Microsoft.Identity.Client.Internal.Requests
             return CacheTokenResponseAndCreateAuthenticationResult(msalTokenResponse);
         }
 
-        private async Task AcquireAuthorizationAsync()
+        internal protected virtual async Task AcquireAuthorizationAsync()
         {
             var authorizationUri = CreateAuthorizationUri(true, true);
 
@@ -163,7 +175,7 @@ namespace Microsoft.Identity.Client.Internal.Requests
             return dict;
         }
 
-        private Uri CreateAuthorizationUri(bool addVerifier = false, bool addState = false)
+        internal protected Uri CreateAuthorizationUri(bool addVerifier = false, bool addState = false)
         {
             IDictionary<string, string> requestParameters = CreateAuthorizationRequestParameters();
 
@@ -279,7 +291,7 @@ namespace Microsoft.Identity.Client.Internal.Requests
             return authorizationRequestParameters;
         }
 
-        private void VerifyAuthorizationResult()
+        protected void VerifyAuthorizationResult()
         {
             if (_authorizationResult.Status == AuthorizationStatus.Success && !_state.Equals(
                     _authorizationResult.State,

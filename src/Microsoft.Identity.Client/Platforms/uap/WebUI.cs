@@ -129,10 +129,10 @@ namespace Microsoft.Identity.Client.Platforms.uap
                         webAuthenticationResult.ResponseErrorDetail.ToString(CultureInfo.InvariantCulture));
                     break;
                 case WebAuthenticationStatus.UserCancel:
-                    result = new AuthorizationResult(AuthorizationStatus.UserCancel, null);
+                    result = new AuthorizationResult(AuthorizationStatus.UserCancel, (string)null);
                     break;
                 default:
-                    result = new AuthorizationResult(AuthorizationStatus.UnknownError, null);
+                    result = new AuthorizationResult(AuthorizationStatus.UnknownError, (string)null);
                     break;
             }
 
